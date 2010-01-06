@@ -1,6 +1,7 @@
 dataSource {
 	pooled = true
-	driverClassName = "org.hsqldb.jdbcDriver"
+//	driverClassName = "org.hsqldb.jdbcDriver"
+    driverClassName = "com.p6spy.engine.spy.P6SpyDriver" // use this driver to enable p6spy logging
 	username = "sa"
 	password = ""
 }
