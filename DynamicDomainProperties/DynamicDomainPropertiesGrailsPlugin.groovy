@@ -59,6 +59,9 @@ class DynamicDomainPropertiesGrailsPlugin {
           def toRun = (dynProps - name).collect {
             d?.metaClass?.getProperty(d, it)
           }.flatten().find { it?.metaClass?.hasProperty(d, name) }
+          toRun = (dynProps - name).collect {
+            d?.metaClass?.getProperty(d, it)
+          }.flatten().find { it?.metaClass?.hasProperty(d, name) }
           if(toRun) return toRun.metaClass.getProperty(toRun, name)
           return queryProperty(delegate, name)
         }
