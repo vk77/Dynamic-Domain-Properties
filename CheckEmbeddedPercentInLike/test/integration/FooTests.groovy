@@ -18,4 +18,5 @@ class FooTests extends GrailsUnitTestCase {
       new Foo(name:"foobar").save(flush:true)
       assert Foo.findByNameLike("f%bar") != null
     }
+
 }
