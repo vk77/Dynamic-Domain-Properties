@@ -1,3 +1,7 @@
 target
 spy.log
 stacktrace.log
+docs
+unzipped
+grails-dynamic-domain-properties-*.zip
+plugin.xml

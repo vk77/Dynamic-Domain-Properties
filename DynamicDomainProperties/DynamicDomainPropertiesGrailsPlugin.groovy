@@ -9,7 +9,12 @@ import com.smokejumperit.grails.dynamicDomain.DynamicProperty as DynProp
 import org.codehaus.groovy.grails.commons.*
 import org.codehaus.groovy.runtime.metaclass.*
 
+import org.apache.log4j.*
+
 class DynamicDomainPropertiesGrailsPlugin {
+  
+    static log = Logger.getLogger(this)
+
     // the plugin version
     def version = "0.1"
     // the version or versions of Grails the plugin is designed for
@@ -24,7 +29,6 @@ class DynamicDomainPropertiesGrailsPlugin {
       'utils', 'views'
     ].collect { "grails-app/$it/**" } + [
       "web-app/**",
-      "test/**",
       "**/com/smokejumperit/test/**"
     ]
 
@@ -53,12 +57,12 @@ Allows a domain class to have dynamic persistent properties.
       Object.metaClass.hasDynamicProperties = {-> false }
 
       application.domainClasses*.clazz.findAll { Class clazz ->
-        println "Checking $clazz for 'dynamicProperties'"
+        log.trace("Checking $clazz for 'dynamicProperties'")
         def dynProps = getStaticPropertyValue(clazz, "dynamicProperties")
         if(dynProps instanceof List) return true
         return dynProps
       }.each { Class clazz -> 
-        println "Applying dynamic property methods to $clazz"
+        log.debug("Applying dynamic property methods to $clazz")
         applyEvents(clazz)
         applyMethodsTo(clazz) 
       }

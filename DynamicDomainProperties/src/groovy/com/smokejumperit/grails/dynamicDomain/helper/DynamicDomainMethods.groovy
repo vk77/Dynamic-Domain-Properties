@@ -13,10 +13,14 @@ import org.codehaus.groovy.grails.commons.*
 import org.codehaus.groovy.runtime.metaclass.*
 import jconch.cache.*
 
+import org.apache.log4j.*
+
 class DynamicDomainMethods {
 
+  static log = Logger.getLogger(this)
+
   static logAndReturn(String msg, value) {
-    println "Returning ${value} (${value?.getClass()}) -- $msg"
+    if(log.isTraceEnabled()) log.trace("Returning ${value} (${value?.getClass()}) -- $msg")
     return value
   }
   
