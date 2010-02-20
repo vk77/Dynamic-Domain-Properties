@@ -1,8 +1,8 @@
-package com.smokejumperit.grails.dynamicDomain
+package com.smokejumperit.test
 
 import grails.test.*
 
-class DynamicPropertyTests extends GrailsUnitTestCase {
+class TokenTests extends GrailsUnitTestCase {
     protected void setUp() {
         super.setUp()
     }

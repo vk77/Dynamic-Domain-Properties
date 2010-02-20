@@ -13,6 +13,7 @@ class StringConverter {
       case String: case Integer: case Long: case Short: case { clazz.isPrimitive() }:  
         return value.toString()
       case { ApplicationProvider.domainHandler?.isArtefact(clazz) }:
+        if(!value.id) value.save(failOnError:true, flush:true)
         return "${stringify(value.id)}"
       case { clazz.metaClass.getStaticMetaMethod("fromString") }: return value.toString()
       default: throw new Exception("Don't know how to stringify ${value} (${value.getClass()}): provide a static 'fromString(String)' method")
@@ -37,25 +38,28 @@ class StringConverter {
         return clazz.get(id)
       case { clazz.metaClass.getStaticMetaMethod("fromString") }:
         return clazz.fromString(value)
-      default: throw new Exception("Don't know how to destringify $value (${value.getClass()})")
+      default: throw new Exception("Don't know how to destringify to $clazz from $value (${value.getClass()})")
     }   
   }   
 
   static Class findClass(String clazzName) {
+    if(!clazzName) return null
     def impls = []
 
     def app = ApplicationProvider.application
     if(app) {
-      impls << { app.getClassForName(clazzName) }
-      impls << { Class.forName(clazzName, true, app.classLoader) }
+      impls << {-> app.getClassForName(clazzName) }
+      impls << {-> Class.forName(clazzName, true, app.classLoader) }
     }
-    impls << { Class.forName(clazzName, true, StringConverter.getClassLoader()) }
+    impls << {-> Class.forName(clazzName, true, StringConverter.getClassLoader()) }
 
-    return impls.inject(null) { Class memo, Closure impl ->
+    def toReturn = impls.inject(null) { Class memo, Closure impl ->
       try {
         return memo ?: impl()
       } catch(ClassNotFoundException skip) {}
     }
+    if(toReturn) return toReturn
+    throw new ClassNotFoundException("Could not found class with name '$clazzName' in the Grails application classloader")
   }
   
 }

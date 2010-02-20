@@ -7,15 +7,18 @@ class TestSubjectTests extends GrailsUnitTestCase {
     def fixture = null
 
     protected void setUp() {
+      println "Running next test"
       super.setUp()
       clearSession()
-      fixture = new TestSubject().save(flush:true, failOnError:true)
+      fixture = new TestSubject().save(failOnError:true)
+      assertNotNull fixture
+      TestSubject.withSession { it.flush() }
+      assertNotNull fixture.id
     }
 
     protected void tearDown() {
-      TestSubject.list()*.delete(flush:true)
-      clearSession()
       super.tearDown()
+      println "Done running test"
     }
 
     void testFramework() { assertTrue true }
@@ -24,19 +27,38 @@ class TestSubjectTests extends GrailsUnitTestCase {
     target."$name" = value
     assertEquals value, target."$name"
     target.save(flush:true, failOnError:true)
+    assertNotNull target
+    assertNotNull target.id
     assertEquals value, target."$name"
   }
 
   static clearSession() {
-    TestSubject.withSession { it.flush(); it.clear() }
+    TestSubject.withSession { it.clear() }
   }
-/*
-  void testStringProperty() {
-    assignProperty(fixture, "foo", "bar")
+
+  void testStringProperty() { doTestProperty("bar") }
+
+  void testIntegerProperty() { doTestProperty(1) }
+
+  void testListWithSublistProperty() { doTestProperty([1,2,[3,4]]) }
+  
+  void testListProperty() { doTestProperty([1,2,3]) }
+  
+  void testMapProperty() { doTestProperty([foo:'bar', baz:6]) }
+
+  void testMapWithListProperty() { doTestProperty([foo:[1,2,3]]) }
+
+  void testDomainClassProperty() { doTestProperty(new Token()) }
+
+  void testNullProperty() { doTestProperty(null) }
+
+  void doTestProperty(value) {
+    println "Testing property with value $value (${value?.getClass()})"
+    assignProperty(fixture, "foo", value)
     clearSession()
-    assertEquals "bar", TestSubject.get(fixture.id).foo
+    println "Assigned the property successfully; now retrieving the value"
+    assertEquals value, TestSubject.get(fixture.id).foo
   }
-*/
 
   void testHasDynamicProperties() { assertTrue fixture.hasDynamicProperties() }
 

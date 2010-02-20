@@ -68,7 +68,7 @@ log4j = {
 
     warn   'org.mortbay.log'
 
-    debug stdout:"grails.app"
+    debug stdout:"grails"
 }
 
 

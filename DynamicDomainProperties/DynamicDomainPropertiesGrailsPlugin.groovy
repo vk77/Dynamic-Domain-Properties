@@ -1,4 +1,9 @@
 import static org.codehaus.groovy.grails.commons.GrailsClassUtils.*
+import static com.smokejumperit.grails.dynamicDomain.helper.DynamicDomainMethods.applyEvents
+import static com.smokejumperit.grails.dynamicDomain.helper.DynamicDomainMethods.applyMethodsTo
+import static com.smokejumperit.grails.dynamicDomain.helper.StringConverter.stringify
+import static com.smokejumperit.grails.dynamicDomain.helper.StringConverter.destringify
+import static com.smokejumperit.grails.dynamicDomain.helper.MethodWrapper.wrapInstanceNoParmMethod
 
 import com.smokejumperit.grails.dynamicDomain.DynamicProperty as DynProp
 import org.codehaus.groovy.grails.commons.*
@@ -47,136 +52,15 @@ Allows a domain class to have dynamic persistent properties.
     private static void load(GrailsApplication application) {
       Object.metaClass.hasDynamicProperties = {-> false }
 
-      application.domainClasses*.clazz.each { Class clazz ->
-
+      application.domainClasses*.clazz.findAll { Class clazz ->
+        println "Checking $clazz for 'dynamicProperties'"
         def dynProps = getStaticPropertyValue(clazz, "dynamicProperties")
-        switch(dynProps) {
-          case null: return
-          case Boolean: case Boolean.TYPE:  
-            if(!dynProps) return  // static dynamicProperties = false
-            dynProps = []         // static dynamicProperties = true 
-            break
-          case List: break
-          default: 
-            throw new Exception("Don't know how to deal with a 'dynamicProperties' properties with value '$dynProps' (${dynProps?.getClass()})")
-        }
-
-        def mc = clazz.metaClass
-
-        mc.hasDynamicProperties = {-> true }
-
-        mc.localDynamicProperties = [:]
-
-        afterMethod(clazz, "onLoad") {->
-          def localDynProps = new HashMap()
-          DynProp.findAllByParent(delegate)?.each {
-            localDynProps[it.propertyName] = it
-          }
-          delegate.localDynamicProperties = localDynProps
-        }
-
-        mc.addLocalDynamicProperty = { DynProp prop ->
-          localDynProps[it.propertyName] = it
-        }
-  
-        mc.addLocalDynamicProperty = { String name, value ->
-          def dynProp = new DynProp()
-          dynProp.parent = delegate
-          dynProp.propertyName = name
-          dynProp.propertyValue = value
-          delegate.addLocalDynamicProperty(dynProp)
-        }
-
-        mc.getLocalDynamicPropertiesMap = {-> 
-          def toReturn = [:]
-          localDynamicProperties.values().each { v -> toReturn[v.propertyName] = v.propertyValue }
-          return Collections.unmodifiableMap(toReturn)
-        }
-
-        mc.getLocalDynamicProperty = { String name -> localDynamicProperties[name] }
-        mc.getLocalDynamicPropertyValue = { String name -> getLocalDynamicProperty(name)?.propertyValue }
-        mc.hasLocalDynamicProperty = { String name -> localDynamicProperties.containsKey(name) }
-
-        def saveImpl = {-> localDynamicProperties.values()*.persist() }
-        ['afterInsert', 'afterUpdate'].each { afterMethod(clazz, it, saveImpl) } 
-
-        def(get,set) = getPropertyMissingPair(clazz)
-        mc.propertyMissing = { String name ->
-          assert !(delegate instanceof Class)
-          def me = delegate
-
-          try {
-            if(get) return get.invoke(me, name)
-          } catch(MissingPropertyException mpe) { checkMPE(mpe, me.getClass(), name) }
-
-          if(me.hasLocalDynamicProperty(name)) {
-            return me.getLocalDynamicPropertyValue(name)
-          }
-
-          def props = (dynProps - name).collect { mc.getProperty(me, it) }.flatten()
-
-          def toRun = props.find { it?.metaClass?.hasProperty(it, name) }
-          if(toRun) return toRun."$name"
-        
-          toRun = props.find { 
-            it?.hasDynamicProperties() && it?.hasLocalDynamicProperty(name) 
-          }
-          if(toRun) return toRun.getLocalDynamicPropertyValue(name)
-
-          throw new MissingPropertyException("No explicit or dynamic property found", name, me.getClass())
-        }
-        mc.propertyMissing = { String name, value ->
-          assert !(delegate instanceof Class)
-          try {
-            if(set) return set.invoke(delegate, name, value)
-          } catch(MissingPropertyException mpe) { checkMPE(mpe, delegate.getClass(), name) }
-          if(delegate.hasLocalDynamicProperty(name)) {
-            delegate.getLocalDynamicProperty(name).propertyValue = value
-          } else {
-            delegate.addLocalDynamicProperty(name, value)
-          }
-        }
-      }
-    }
-
-    private static checkMPE(MissingPropertyException mpe, Class type, String propertyName) {
-      if(mpe.type == type && mpe.property == propertyName) { 
-        // Ignore 
-      } else { // Someone else blew up
-        throw mpe
-      }
-    }
-
-    static newInstance(Class main, Class fallback) {
-      try {
-        return main.newInstance()
-      } catch(Exception e) {
-        return fallback.newInstance()
-      }
-    }
-
-    private static List getPropertyMissingPair(target) {
-      def methods = target.metaClass.methods
-      def originalGetProp = methods.find { 
-        !it.isStatic() && it.name == "propertyMissing" && it.nativeParameterTypes == ([String] as Class[]) 
-      }
-      def originalSetProp = methods.find { 
-        !it.isStatic() && it.name == "propertyMissing" && it.nativeParameterTypes == ([String, Object] as Class[]) 
-      }
-      return [originalGetProp, originalSetProp]
-    }
-
-    private static void afterMethod(target, String methodName, Closure toDo) {
-      def methods = target.metaClass.methods
-      def original = methods.find {
-        !it.isStatic() && it.name == methodName && it.nativeParameterTypes == ([] as Class[]) 
-      }
-      target.metaClass."$methodName" = {->
-        assert !(delegate instanceof Class)
-        if(original) original.invoke(delegate)
-        def doMe = toDo.clone()
-        doMe.delegate = delegate
-        doMe()
+        if(dynProps instanceof List) return true
+        return dynProps
+      }.each { Class clazz -> 
+        println "Applying dynamic property methods to $clazz"
+        applyEvents(clazz)
+        applyMethodsTo(clazz) 
       }
     }
 

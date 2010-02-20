@@ -21,7 +21,7 @@ class FooTests extends GrailsUnitTestCase {
       def foo = new Foo()
       assert !loaded
 
-      foo.save(flush:true)
+      foo.save(flush:true, failOnError:true)
       assert loaded
     }
 
@@ -36,7 +36,7 @@ class FooTests extends GrailsUnitTestCase {
         deleted = true
       }
 
-      def foo = new Foo().save(flush:true)
+      def foo = new Foo().save(flush:true, failOnError:true)
       assert foo != null
 
       foo.delete(flush:true)
