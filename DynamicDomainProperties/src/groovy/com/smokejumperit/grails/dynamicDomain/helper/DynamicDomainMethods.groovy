@@ -212,14 +212,15 @@ class DynamicDomainMethods {
       if(found) return logAndReturn("Found from delegate", found.propertyValue)
 
       found = delegateProps.find { prop ->
-        return me."$prop"?.metaClass?.hasProperty(propVal, name) 
+        def propVal = me."$prop"
+        return propVal?.metaClass?.hasProperty(propVal, name) 
       }
       if(found) return logAndReturn("Found as property of $found", delegate."$found"."$name")
 
       found = delegateProps.findAll { me."$it"?.hasDynamicProperties() }?.find { prop ->
         return me."$prop"?.hasLocalDynamicProperty(name)
       }
-      if(found) return logAndReturn("Found as local dynamic property of $found", delegate."$found".getLocalDynamicProperty(name))
+      if(found) return logAndReturn("Found as local dynamic property of $found", delegate."$found".getLocalDynamicProperty(name)?.propertyValue)
 
       return logAndReturn("Could not find $name", null)
     }
@@ -233,10 +234,11 @@ class DynamicDomainMethods {
       }
 
       found = delegateProps.find { prop ->
-        return me."$prop"?.metaClass?.hasProperty(propVal, name) 
+        def propVal = me."$prop"
+        return propVal?.metaClass?.hasProperty(propVal, name) 
       }
       if(found) { 
-        return delegate."$found" = value
+        return delegate."$found"."$name" = value
       }
 
       found = delegateProps.findAll { me."$it"?.hasDynamicProperties() }?.find { prop ->
