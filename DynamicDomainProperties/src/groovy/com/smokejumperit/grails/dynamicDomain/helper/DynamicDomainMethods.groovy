@@ -50,7 +50,7 @@ class DynamicDomainMethods {
   static applyEvents(Class clazz) {
     def mc = clazz.metaClass
     [
-      onLoad:{-> println "Within 'onLoad' body for $delegate"; applyMethodsTo(delegate) },
+      onLoad:{-> applyMethodsTo(delegate) },
       afterInsert:doInsert.clone(),
       afterUpdate:doInsert.clone(),
       afterDelete:doDelete.clone()
@@ -64,7 +64,13 @@ class DynamicDomainMethods {
     assert !(target instanceof Class)
     DynProp.withNewSession { session ->
       DynProp.withTransaction {
-        target.getLocalDynamicProperties().values()*.save(failOnError:true)
+		target.getLocalDynamicProperties().values().each { dp ->
+			if(!dp.parentId){
+				dp.parentId = target.id
+				dp.parentClassValue = target.class.name
+			}
+			dp.save(failOnError:true)
+		}
         session.flush()
       }
     }
@@ -82,7 +88,7 @@ class DynamicDomainMethods {
     assert !(target instanceof Class)
     DynProp.withNewSession { session ->
       DynProp.withTransaction { 
-        doDeleteImpl(it)
+        doDeleteImpl(target)
         session.flush()
       }
     }
@@ -220,7 +226,11 @@ class DynamicDomainMethods {
       found = delegateProps.findAll { me."$it"?.hasDynamicProperties() }?.find { prop ->
         return me."$prop"?.hasLocalDynamicProperty(name)
       }
-      if(found) return logAndReturn("Found as local dynamic property of $found", delegate."$found".getLocalDynamicProperty(name)?.propertyValue)
+		if(found) {
+			def proxy = delegate."$found"
+			def val = proxy."$name"
+			return logAndReturn("Found as local dynamic property of $found", val)
+		}
 
       return logAndReturn("Could not find $name", null)
     }
@@ -265,7 +275,6 @@ class DynamicDomainMethods {
       } catch(MissingPropertyException mpe) { checkMPE(mpe, me.getClass(), name) }
 
       def toReturn = me.getDynamicPropertyValue(name)
-      println "Returning $toReturn (${toReturn?.getClass()}) from propertyMissing(get)"
       return toReturn
     }
     mc.propertyMissing = { String name, value ->
@@ -277,7 +286,6 @@ class DynamicDomainMethods {
       } catch(MissingPropertyException mpe) { checkMPE(mpe, me.getClass(), name) }
 
       def toReturn = me.setDynamicPropertyValue(name, value)
-      println "Returning $toReturn (${toReturn?.getClass()}) from propertyMissing(set)"
       return toReturn
     }
   }
